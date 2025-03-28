@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: password-rotator
+    env: python
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --reuse-port main:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GOOGLE_SHEETS_ID
+        sync: false  # Este valor precisa ser configurado pelo usuário
+      - key: GOOGLE_SHEETS_CREDENTIALS
+        sync: false  # Este valor precisa ser configurado pelo usuário
+      - key: TWILIO_ACCOUNT_SID
+        sync: false  # Este valor precisa ser configurado pelo usuário
+      - key: TWILIO_AUTH_TOKEN
+        sync: false  # Este valor precisa ser configurado pelo usuário
+      - key: TWILIO_PHONE_NUMBER
+        sync: false  # Este valor precisa ser configurado pelo usuário
