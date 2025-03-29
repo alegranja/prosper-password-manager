@@ -25,7 +25,7 @@ else:
     credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
 
 # Extract spreadsheet ID from the URL or environment
-spreadsheet_id = os.environ.get("GOOGLE_SHEETS_ID", "1qLGNAkAVFzAcxQhfFgBzRBfIbDXFrTNFsNA_lTeSZeE")
+spreadsheet_id = os.environ.get("GOOGLE_SPREADSHEET_ID", "1qLGNAkAVFzAcxQhfFgBzRBfIbDXFrTNFsNA_lTeSZeE")
 
 sheets_service = GoogleSheetsService(
     credentials_json=credentials_json,
