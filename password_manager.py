@@ -71,7 +71,7 @@ class PasswordManager:
             password_value = None
             
             # Check if the row has the "Usada" column (Column C) and if it's already marked as used
-            is_used = len(row) > 2 and row[2] == "Usada"
+            is_used = len(row) > 6 and row[6] == "Usada"
             
             if not is_used:
                 # Get the password (Column B, index 1)
