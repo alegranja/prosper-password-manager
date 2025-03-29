@@ -22,7 +22,7 @@ if os.path.exists(credential_path):
     with open(credential_path, 'r') as f:
         credentials_json = f.read()
 else:
-    credentials_json = os.environ.get("GOOGLE_SHEETS_CREDENTIALS")
+    credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
 
 # Extract spreadsheet ID from the URL or environment
 spreadsheet_id = os.environ.get("GOOGLE_SHEETS_ID", "1qLGNAkAVFzAcxQhfFgBzRBfIbDXFrTNFsNA_lTeSZeE")
