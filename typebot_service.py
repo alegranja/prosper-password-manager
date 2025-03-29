@@ -44,7 +44,15 @@ class TypebotService:
                     "message": f"Não há senhas disponíveis para {vendor}",
                     "has_password": False
                 }
-            
+                
+            # No arquivo typebot_service.py
+if not password_data:
+    return {
+        "success": False,
+        "message": f"Todas as senhas para {vendor} já foram utilizadas. Por favor, contate o administrador.",
+        "has_password": False
+    }
+    
             # Create the response
             response = {
                 "success": True,
