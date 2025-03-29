@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prosper Password Manager</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Prosper Password Manager</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">Estatísticas de Senhas</div>
+            <div class="card-body">
+                {% if stats %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-primary text-white mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total de Senhas</h5>
+                                    <p class="card-text display-4">{{ stats.total_passwords }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-success text-white mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Senhas Disponíveis</h5>
+                                    <p class="card-text display-4">{{ stats.available_passwords }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Senhas Usadas</h5>
+                                    <p class="card-text display-4">{{ stats.used_passwords }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mt-4">Detalhes por Fornecedor</h4>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fornecedor</th>
+                                    <th>Total</th>
+                                    <th>Disponíveis</th>
+                                    <th>Usadas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vendor, info in stats.vendors.items() %}
+                                <tr>
+                                    <td>{{ vendor }}</td>
+                                    <td>{{ info.total }}</td>
+                                    <td>{{ info.available }}</td>
+                                    <td>{{ info.used }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        Não foi possível carregar as estatísticas. Talvez as credenciais do Google Sheets 
+                        não estejam configuradas corretamente ou a planilha esteja inacessível.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">Administração</div>
+            <div class="card-body">
+                <h5>Resetar Senha</h5>
+                <form id="resetForm" class="mb-3">
+                    <div class="mb-3">
+                        <label for="vendorSelect" class="form-label">Fornecedor</label>
+                        <select class="form-select" id="vendorSelect" name="vendor" required>
+                            <option value="">Selecione um fornecedor</option>
+                            {% if stats and stats.vendors %}
+                                {% for vendor in stats.vendors.keys() %}
+                                <option value="{{ vendor }}">{{ vendor }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="passwordInput" class="form-label">Senha</label>
+                        <input type="text" class="form-control" id="passwordInput" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Resetar Senha</button>
+                </form>
+                
+                <h5>Ações</h5>
+                <button id="refreshButton" class="btn btn-info">Atualizar Dados</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
