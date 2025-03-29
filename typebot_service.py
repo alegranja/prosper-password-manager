@@ -38,21 +38,14 @@ class TypebotService:
             # Automatically assign the next password, with optional SMS delivery
             password_data = password_manager.auto_assign_next_password(vendor, phone_number)
             
+            # Verificar se há senhas disponíveis
             if not password_data:
                 return {
                     "success": False,
-                    "message": f"Não há senhas disponíveis para {vendor}",
+                    "message": f"Todas as senhas para {vendor} já foram utilizadas. Por favor, contate o administrador.",
                     "has_password": False
                 }
-                
-            # No arquivo typebot_service.py
-if not password_data:
-    return {
-        "success": False,
-        "message": f"Todas as senhas para {vendor} já foram utilizadas. Por favor, contate o administrador.",
-        "has_password": False
-    }
-    
+            
             # Create the response
             response = {
                 "success": True,
