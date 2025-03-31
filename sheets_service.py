@@ -39,14 +39,18 @@ class GoogleSheetsService:
                 
         self.sheet_data = {}
         # Map columns to match Google Sheets structure
-        # The column_mapping is adjusted to match:
-        # Column A: Vendor (type of user)
-        # Column B: Password 
-        # Column C: Status (blank=unused, "Usada"=used)
+        # The column_mapping is adjusted to match your spreadsheet:
+        # Column A: Vendor name (Senhas : Supervisor, etc.)
+        # Columns B-F: Passwords 1-5
+        # Column G: Status (Usada column)
         self.column_mapping = {
             'vendor': 0,  # Column A - Vendor name
-            'senha': 1,   # Column B - Password
-            'usada': 2,   # Column C - Status (Usada/empty)
+            'senha1': 1,  # Column B - Password 1
+            'senha2': 2,  # Column C - Password 2
+            'senha3': 3,  # Column D - Password 3
+            'senha4': 4,  # Column E - Password 4
+            'senha5': 5,  # Column F - Password 5
+            'usada': 6,   # Column G - Status (Usada column)
         }
         
     def _create_sheets_service(self, credentials_json: Optional[str]):
@@ -87,20 +91,14 @@ class GoogleSheetsService:
             List of rows with values
         """
         if self.demo_mode:
-            # Return sample data for demo purposes with expanded data
+            # Return sample data for demo purposes matching your spreadsheet format
             return [
-                ['Vendedor', 'Senha', 'Status'],
-                ['Senhas - Supervisor', '1234-78956', ''],
-                ['Senhas - Supervisor', '1234-78957', ''],
-                ['Senhas - Supervisor', '1234-78958', 'Usada'],
-                ['Senhas - Vendedor da Equipe Especial', '5678-12345', ''],
-                ['Senhas - Vendedor da Equipe Especial', '5678-12346', 'Usada'],
-                ['Senhas - Gerente', '9012-34567', ''],
-                ['Senhas - Gerente', '9012-34568', ''],
-                ['Senhas - Vendedor Medicamento', '3456-78901', ''],
-                ['Senhas - Vendedor Medicamento', '3456-78902', 'Usada'],
-                ['Senhas - Vendedor Alimento', '7890-12345', ''],
-                ['Senhas - Vendedor Alimento', '7890-12346', '']
+                ['Vendedor', 'Senhas 1', 'Senhas 2', 'Senhas 3', 'Senhas 4', 'Senhas 5', 'Usada'],
+                ['Senhas : Supervisor', '1234-78956', '1234-4569', '1234-4570', '1234-4571', '1234-4572', ''],
+                ['Senhas : Vendedor da Equipe Especial', '1234-78957', '1234-78950', '1234-78951', '1234-78952', '1234-78953', ''],
+                ['Senhas : Gerente', '1234-78940', '1234-78941', '1234-78942', '1234-78943', '1234-78944', ''],
+                ['Senhas : Vendedor Medicamento', '1234-78980', '1234-78981', '1234-78982', '1234-78983', '1234-78984', 'Usada'],
+                ['Senhas : Vendedor Alimento', '1234-78990', '1234-78991', '1234-78992', '1234-78993', '1234-78994', '']
             ]
         
         try:
@@ -168,7 +166,7 @@ class GoogleSheetsService:
             if self.demo_mode:
                 logger.info(f"Demo mode: Marking password at row {row_index} as used")
                 return True
-            return self.update_cell(row_index, 'C', 'Usada')
+            return self.update_cell(row_index, 'G', 'Usada')
         except Exception as e:
             logger.error(f"Error marking password as used: {str(e)}")
             return False
@@ -187,7 +185,7 @@ class GoogleSheetsService:
             if self.demo_mode:
                 logger.info(f"Demo mode: Marking password at row {row_index} as unused")
                 return True
-            return self.update_cell(row_index, 'C', '')
+            return self.update_cell(row_index, 'G', '')
         except Exception as e:
             logger.error(f"Error marking password as unused: {str(e)}")
             return False
