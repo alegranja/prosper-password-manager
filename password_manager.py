@@ -77,28 +77,30 @@ class PasswordManager:
                 # Get the row data
                 row = self.password_data[row_index]
                 
-                # Find the first unused password
+                # Find the first unused password in any of the 5 password columns
                 password_index = None
                 password_value = None
                 
-                # Check if the row has the "Usada" column (Column C) and if it's already marked as used
-                is_used = len(row) > 2 and row[2] == "Usada"
+                # Check if the row has the "Usada" column (Column G) and if it's already marked as used
+                is_used = len(row) > 6 and row[6] == "Usada"
                 
                 if not is_used:
-                    # Get the password (Column B, index 1)
-                    if len(row) > 1 and row[1] and row[1].strip():
-                        password_index = 1
-                        password_value = row[1]
+                    # Check each password column (B through F) for an available password
+                    for i in range(1, 6):  # Columns B through F (indices 1-5)
+                        if len(row) > i and row[i] and row[i].strip():
+                            password_index = i
+                            password_value = row[i]
+                            break
                             
                 if password_index is not None:
                     # Mark as used
                     self.sheets_service.mark_password_as_used(row_index + 1)  # +1 for 1-based row index
                     
                     # Update our local data
-                    if len(row) <= 2:
+                    if len(row) <= 6:
                         # Extend row if needed
-                        row.extend([''] * (3 - len(row)))
-                    row[2] = "Usada"
+                        row.extend([''] * (7 - len(row)))
+                    row[6] = "Usada"
                     
                     # Log that we're automatically sending this password
                     logger.info(f"Automatically sending password '{password_value}' for vendor '{row[0]}'")
@@ -211,16 +213,20 @@ class PasswordManager:
                 # Get the row data
                 row = self.password_data[row_index]
                 
-                # Check if this password exists for this vendor
-                password_exists = len(row) > 1 and row[1] == password
+                # Check if this password exists in any of the 5 password columns
+                password_exists = False
+                for i in range(1, 6):  # Columns B through F (indices 1-5)
+                    if len(row) > i and row[i] == password:
+                        password_exists = True
+                        break
                 
                 if password_exists:
                     # Mark as unused
                     result = self.sheets_service.mark_password_as_unused(row_index + 1)
                     
                     # Update our local data
-                    if result and len(row) > 2:
-                        row[2] = ""
+                    if result and len(row) > 6:
+                        row[6] = ""
                         
                     logger.info(f"Reset password '{password}' for vendor '{row[0]}'")
                     return result
@@ -257,16 +263,7 @@ class PasswordManager:
                     
                 vendor = row[0]
                 unique_vendors.add(vendor)
-                is_used = len(row) > 2 and row[2] == "Usada"
-                
-                # Check if this row has a password
-                has_password = len(row) > 1 and row[1] and row[1].strip()
-                
-                if has_password:
-                    if is_used:
-                        used_passwords += 1
-                    else:
-                        available_passwords += 1
+                is_used = len(row) > 6 and row[6] == "Usada"
                 
                 # Inicializar o dicionário de estatísticas do fornecedor se for a primeira vez
                 if vendor not in vendor_stats:
@@ -276,13 +273,22 @@ class PasswordManager:
                         "used_passwords": 0
                     }
                 
-                # Atualizar as estatísticas do fornecedor
-                if has_password:
-                    vendor_stats[vendor]["total_passwords"] += 1
+                # Conta quantas senhas existem nessa linha (entre colunas B e F)
+                password_count = 0
+                for i in range(1, 6):  # Columns B through F (indices 1-5)
+                    if len(row) > i and row[i] and row[i].strip():
+                        password_count += 1
+                
+                # Atualiza as estatísticas
+                if password_count > 0:
                     if is_used:
                         vendor_stats[vendor]["used_passwords"] += 1
+                        used_passwords += 1
                     else:
                         vendor_stats[vendor]["available_passwords"] += 1
+                        available_passwords += 1
+                    
+                    vendor_stats[vendor]["total_passwords"] += 1
             
             stats = {
                 "total_vendors": len(unique_vendors),
