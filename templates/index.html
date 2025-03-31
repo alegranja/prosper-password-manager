@@ -56,9 +56,9 @@
                                 {% for vendor, info in stats.vendors.items() %}
                                 <tr>
                                     <td>{{ vendor }}</td>
-                                    <td>{{ info.total }}</td>
-                                    <td>{{ info.available }}</td>
-                                    <td>{{ info.used }}</td>
+                                    <td>{{ info.total_passwords }}</td>
+                                    <td>{{ info.available_passwords }}</td>
+                                    <td>{{ info.used_passwords }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
