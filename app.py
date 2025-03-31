@@ -14,22 +14,46 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
 # Initialize services
-# Get the credentials from file or environment variable
-credential_path = "attached_assets/senha-guest-454313-2a95180ad1cb.json"
+# Get the credentials from environment variable or file
 credentials_json = None
 
-if os.path.exists(credential_path):
-    with open(credential_path, 'r') as f:
-        credentials_json = f.read()
+# Tenta obter credenciais da variável de ambiente GOOGLE_CREDENTIALS primeiro
+if os.environ.get("GOOGLE_CREDENTIALS"):
+    credentials_json = os.environ.get("GOOGLE_CREDENTIALS")
+    logger.info("Using Google credentials from GOOGLE_CREDENTIALS environment variable")
+# Depois tenta GOOGLE_SHEETS_CREDENTIALS (nome usado anteriormente)
+elif os.environ.get("GOOGLE_SHEETS_CREDENTIALS"):
+    credentials_json = os.environ.get("GOOGLE_SHEETS_CREDENTIALS")
+    logger.info("Using Google credentials from GOOGLE_SHEETS_CREDENTIALS environment variable")
+# Finalmente, tenta carregar do arquivo
 else:
-    credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    # Tentar primeiro o novo arquivo de credenciais
+    credential_path = "credentials.json"
+    if os.path.exists(credential_path):
+        try:
+            logger.info(f"Using Google credentials from file: {credential_path}")
+            credentials_json = credential_path  # Passando o caminho do arquivo diretamente
+        except Exception as e:
+            logger.error(f"Error reading credentials file: {str(e)}")
+    # Se não encontrar, tenta o arquivo original
+    elif os.path.exists("attached_assets/senha-guest-454313-2a95180ad1cb.json"):
+        try:
+            credential_path = "attached_assets/senha-guest-454313-2a95180ad1cb.json"
+            logger.info(f"Using Google credentials from file: {credential_path}")
+            credentials_json = credential_path  # Passando o caminho do arquivo diretamente
+        except Exception as e:
+            logger.error(f"Error reading credentials file: {str(e)}")
 
-# Extract spreadsheet ID from the URL or environment
-spreadsheet_id = os.environ.get("GOOGLE_SPREADSHEET_ID", "1qLGNAkAVFzAcxQhfFgBzRBfIbDXFrTNFsNA_lTeSZeE")
+# Extract spreadsheet ID from the environment or use default
+spreadsheet_id = os.environ.get("GOOGLE_SPREADSHEET_ID") or os.environ.get("GOOGLE_SHEETS_ID", "1qLGNAkAVFzAcxQhfFgBzRBfIbDXFrTNFsNA_lTeSZeE")
+logger.info(f"Using spreadsheet ID: {spreadsheet_id}")
 
+# Forçar o modo de demonstração para facilitar o teste
+# Para usar com Google Sheets real, mude force_demo para False
 sheets_service = GoogleSheetsService(
     credentials_json=credentials_json,
-    spreadsheet_id=spreadsheet_id
+    spreadsheet_id=spreadsheet_id,
+    force_demo=True
 )
 
 password_manager = PasswordManager(sheets_service)
@@ -40,11 +64,27 @@ def index():
     """Display the main dashboard."""
     try:
         password_stats = password_manager.get_password_statistics()
+        
+        # Adicionar logs para depuração
+        logger.debug(f"Stats returned: {password_stats}")
+        
+        # Garantir que temos a estrutura correta
+        if isinstance(password_stats, dict) and 'vendors' not in password_stats:
+            password_stats['vendors'] = {}
+            
         return render_template('index.html', stats=password_stats)
     except Exception as e:
         logger.error(f"Error rendering index: {str(e)}")
         flash(f"Error loading dashboard: {str(e)}", "danger")
-        return render_template('index.html', stats=None)
+        
+        # Fornecer um objeto stats vazio mas com a estrutura correta
+        empty_stats = {
+            'total_passwords': 0,
+            'available_passwords': 0,
+            'used_passwords': 0,
+            'vendors': {}
+        }
+        return render_template('index.html', stats=empty_stats)
         
 @app.route('/typebot-guide')
 def typebot_guide():
