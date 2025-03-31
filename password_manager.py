@@ -28,7 +28,7 @@ class PasswordManager:
             data = self.sheets_service.fetch_sheet_data()
             self.password_data = data
             
-            # Build vendor map for faster lookups
+            # Build vendor map for faster lookups - agora armazenaremos uma lista de índices por vendor
             self.vendor_map = {}
             for i, row in enumerate(data):
                 if i == 0:  # Skip header row
@@ -36,13 +36,22 @@ class PasswordManager:
                     
                 if len(row) > 0:
                     vendor = row[0]
-                    self.vendor_map[vendor.lower()] = i
+                    vendor_key = vendor.lower()
                     
-            logger.debug(f"Refreshed password data. Found {len(self.vendor_map)} vendor entries.")
+                    if vendor_key not in self.vendor_map:
+                        self.vendor_map[vendor_key] = []
+                        
+                    # Adicionar o índice desta linha ao mapa do vendor
+                    self.vendor_map[vendor_key].append(i)
+                    
+            logger.debug(f"Refreshed password data. Found {len(self.vendor_map)} unique vendor entries.")
             
         except Exception as e:
             logger.error(f"Error refreshing password data: {str(e)}")
-            raise
+            # Em vez de propagar a exceção, inicializa com dados vazios
+            self.password_data = []
+            self.vendor_map = {}
+            logger.warning("Inicializado com dados vazios devido a erro de credenciais ou acesso à planilha.")
     
     def get_next_password(self, vendor: str) -> Optional[Dict[str, Any]]:
         """
@@ -57,50 +66,53 @@ class PasswordManager:
         vendor = vendor.lower()
         
         try:
-            # Find vendor row
-            row_index = self.vendor_map.get(vendor)
-            if row_index is None:
+            # Find vendor rows
+            row_indices = self.vendor_map.get(vendor)
+            if not row_indices:
                 logger.warning(f"Vendor not found: {vendor}")
                 return None
-                
-            # Get the row data
-            row = self.password_data[row_index]
             
-            # Find the first unused password
-            password_index = None
-            password_value = None
+            # Procurar a primeira senha não usada deste vendor
+            for row_index in row_indices:
+                # Get the row data
+                row = self.password_data[row_index]
+                
+                # Find the first unused password
+                password_index = None
+                password_value = None
+                
+                # Check if the row has the "Usada" column (Column C) and if it's already marked as used
+                is_used = len(row) > 2 and row[2] == "Usada"
+                
+                if not is_used:
+                    # Get the password (Column B, index 1)
+                    if len(row) > 1 and row[1] and row[1].strip():
+                        password_index = 1
+                        password_value = row[1]
+                            
+                if password_index is not None:
+                    # Mark as used
+                    self.sheets_service.mark_password_as_used(row_index + 1)  # +1 for 1-based row index
+                    
+                    # Update our local data
+                    if len(row) <= 2:
+                        # Extend row if needed
+                        row.extend([''] * (3 - len(row)))
+                    row[2] = "Usada"
+                    
+                    # Log that we're automatically sending this password
+                    logger.info(f"Automatically sending password '{password_value}' for vendor '{row[0]}'")
+                    
+                    return {
+                        "vendor": row[0],
+                        "password": password_value,
+                        "password_number": password_index,
+                        "row_index": row_index + 1
+                    }
             
-            # Check if the row has the "Usada" column (Column C) and if it's already marked as used
-            is_used = len(row) > 6 and row[6] == "Usada"
-            
-            if not is_used:
-                # Get the password (Column B, index 1)
-                if len(row) > 1 and row[1] and row[1].strip():
-                    password_index = 1
-                    password_value = row[1]
-                        
-            if password_index is not None:
-                # Mark as used
-                self.sheets_service.mark_password_as_used(row_index + 1)  # +1 for 1-based row index
-                
-                # Update our local data
-                if len(row) <= 2:
-                    # Extend row if needed
-                    row.extend([''] * (3 - len(row)))
-                row[2] = "Usada"
-                
-                # Log that we're automatically sending this password
-                logger.info(f"Automatically sending password '{password_value}' for vendor '{row[0]}'")
-                
-                return {
-                    "vendor": row[0],
-                    "password": password_value,
-                    "password_number": password_index,
-                    "row_index": row_index + 1
-                }
-            else:
-                logger.warning(f"No available passwords for vendor: {vendor}")
-                return None
+            # Se chegou aqui, não encontrou nenhuma senha disponível
+            logger.warning(f"No available passwords for vendor: {vendor}")
+            return None
                 
         except Exception as e:
             logger.error(f"Error getting next password for {vendor}: {str(e)}")
@@ -188,30 +200,34 @@ class PasswordManager:
         vendor = vendor.lower()
         
         try:
-            # Find vendor row
-            row_index = self.vendor_map.get(vendor)
-            if row_index is None:
+            # Find vendor rows
+            row_indices = self.vendor_map.get(vendor)
+            if not row_indices:
                 logger.warning(f"Vendor not found: {vendor}")
                 return False
-                
-            # Get the row data
-            row = self.password_data[row_index]
             
-            # Check if this password exists for this vendor
-            password_exists = len(row) > 1 and row[1] == password
-            
-            if not password_exists:
-                logger.warning(f"Password {password} not found for vendor {vendor}")
-                return False
+            # Procurar a senha específica nas linhas deste vendor
+            for row_index in row_indices:
+                # Get the row data
+                row = self.password_data[row_index]
                 
-            # Mark as unused
-            result = self.sheets_service.mark_password_as_unused(row_index + 1)
-            
-            # Update our local data
-            if result and len(row) > 2:
-                row[2] = ""
+                # Check if this password exists for this vendor
+                password_exists = len(row) > 1 and row[1] == password
                 
-            return result
+                if password_exists:
+                    # Mark as unused
+                    result = self.sheets_service.mark_password_as_unused(row_index + 1)
+                    
+                    # Update our local data
+                    if result and len(row) > 2:
+                        row[2] = ""
+                        
+                    logger.info(f"Reset password '{password}' for vendor '{row[0]}'")
+                    return result
+            
+            # Se chegou aqui, não encontrou a senha
+            logger.warning(f"Password {password} not found for vendor {vendor}")
+            return False
             
         except Exception as e:
             logger.error(f"Error resetting password for {vendor}: {str(e)}")
@@ -225,7 +241,8 @@ class PasswordManager:
             Dictionary with password statistics
         """
         try:
-            total_vendors = len(self.vendor_map)
+            # Usar um conjunto para contar fornecedores únicos
+            unique_vendors = set()
             available_passwords = 0
             used_passwords = 0
             
@@ -239,6 +256,7 @@ class PasswordManager:
                     continue
                     
                 vendor = row[0]
+                unique_vendors.add(vendor)
                 is_used = len(row) > 2 and row[2] == "Usada"
                 
                 # Check if this row has a password
@@ -250,23 +268,43 @@ class PasswordManager:
                     else:
                         available_passwords += 1
                 
-                vendor_stats[vendor] = {
-                    "total_passwords": 1 if has_password else 0,
-                    "used": is_used
-                }
+                # Inicializar o dicionário de estatísticas do fornecedor se for a primeira vez
+                if vendor not in vendor_stats:
+                    vendor_stats[vendor] = {
+                        "total_passwords": 0,
+                        "available_passwords": 0,
+                        "used_passwords": 0
+                    }
+                
+                # Atualizar as estatísticas do fornecedor
+                if has_password:
+                    vendor_stats[vendor]["total_passwords"] += 1
+                    if is_used:
+                        vendor_stats[vendor]["used_passwords"] += 1
+                    else:
+                        vendor_stats[vendor]["available_passwords"] += 1
             
-            return {
-                "total_vendors": total_vendors,
+            stats = {
+                "total_vendors": len(unique_vendors),
+                "total_passwords": available_passwords + used_passwords,
                 "available_passwords": available_passwords,
                 "used_passwords": used_passwords,
-                "vendor_stats": vendor_stats
+                "vendor_stats": vendor_stats,
+                "vendors": vendor_stats  # Duplicado para compatibilidade com o template
             }
+            
+            # Log das estatísticas para depuração
+            logger.debug(f"Calculated statistics: {stats}")
+            
+            return stats
             
         except Exception as e:
             logger.error(f"Error getting password statistics: {str(e)}")
             return {
                 "total_vendors": 0,
+                "total_passwords": 0,
                 "available_passwords": 0,
                 "used_passwords": 0,
-                "vendor_stats": {}
+                "vendor_stats": {},
+                "vendors": {}  # Duplicado para compatibilidade com o template
             }
