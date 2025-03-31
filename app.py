@@ -48,13 +48,18 @@ else:
 spreadsheet_id = os.environ.get("GOOGLE_SPREADSHEET_ID") or os.environ.get("GOOGLE_SHEETS_ID", "1qLGNAkAVFzAcxQhfFgBzRBfIbDXFrTNFsNA_lTeSZeE")
 logger.info(f"Using spreadsheet ID: {spreadsheet_id}")
 
-# Forçar o modo de demonstração para facilitar o teste
-# Para usar com Google Sheets real, mude force_demo para False
+# Verificar configuração do modo de demonstração
+force_demo = os.environ.get("FORCE_DEMO", "").lower() == "true"
+
+# Inicializar o serviço do Google Sheets
+# Se force_demo for True, ativará o modo de demonstração
 sheets_service = GoogleSheetsService(
     credentials_json=credentials_json,
     spreadsheet_id=spreadsheet_id,
-    force_demo=False
+    force_demo=force_demo
 )
+
+logger.info(f"Google Sheets service initialized. Demo mode: {sheets_service.demo_mode}")
 
 password_manager = PasswordManager(sheets_service)
 typebot_service = TypebotService()
