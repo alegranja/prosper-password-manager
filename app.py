@@ -53,7 +53,7 @@ logger.info(f"Using spreadsheet ID: {spreadsheet_id}")
 sheets_service = GoogleSheetsService(
     credentials_json=credentials_json,
     spreadsheet_id=spreadsheet_id,
-    force_demo=True
+    force_demo=False
 )
 
 password_manager = PasswordManager(sheets_service)
