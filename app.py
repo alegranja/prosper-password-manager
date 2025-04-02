@@ -144,6 +144,17 @@ def sync_typebot():
         logger.error(f"Error in typebot sync: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/typebot-webhook', methods=['POST'])
+def typebot_webhook():
+    """Webhook para integração com Typebot."""
+    try:
+        data = request.json
+        result = typebot_service.process_webhook(data, password_manager)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Error in typebot webhook: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+        
 @app.route('/api/reset-password', methods=['POST'])
 def reset_password():
     """Admin endpoint to mark a password as unused again."""
